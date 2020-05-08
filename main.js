@@ -13,6 +13,12 @@ let iceCandidates = [];
 
 let remoteStream = new MediaStream();
 
+function storeAnswerInLocalStorage()
+{
+    let info = location.hash.substr(2);
+    localStorage["testtesttest"] = info;
+}
+
 function processAnswer(info)
 {
     console.log("Processing answer");
@@ -47,33 +53,25 @@ function onIceGatheringFinished()
     info = JSON.stringify(info);
     info = btoa(info);
     
+    let url = location.origin + location.pathname + "#";
+    if (!isInitiator)
+        url += "?";
+    url += info;
+
+    document.getElementById("copyurl").innerHTML = url;
+
     if (isInitiator)
     {
-        let url = location.href + "#" + info;
-        console.log(url);
-
         localStorage["testtesttest"] = "";
+        let timerId = setInterval(() => {
+            let info = localStorage["testtesttest"];
 
-        setTimeout(() => {
+            if (localStorage["testtesttest"].length == 0)
+                return;
 
-            // TODO: for testing
-            let a = document.createElement("a");
-            a.href = url;
-            a.target = "_blank";
-            a.click();
-
-            let timerId = setInterval(function() {
-                if (localStorage["testtesttest"].length > 0)
-                {
-                    clearInterval(timerId);
-                    processAnswer(localStorage["testtesttest"]);
-                }
-            }, 1000);
+            clearInterval(timerId);
+            processAnswer(info);
         }, 1000);
-    }
-    else
-    {
-        localStorage["testtesttest"] = info;
     }
 }
 
@@ -138,6 +136,13 @@ export async function main()
 {
     console.log("main()");
     
+    if (location.hash.length > 0 && location.hash[1] == "?") // server reply
+    {
+        storeAnswerInLocalStorage();
+        window.close(); // TODO: figure this out
+        return;
+    }
+
     try 
     {
         let stream = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
@@ -158,8 +163,15 @@ export async function main()
         // Streaming or receiving?
         if (location.hash.length > 0)
         {
-            isInitiator = false;
-            startReceiving();
+            if (location.hash[1] == "?") // server reply
+            {
+                storeAnswerInLocalStorage();
+            }
+            else
+            {
+                isInitiator = false;
+                startReceiving();
+            }
         }
         else
         {
