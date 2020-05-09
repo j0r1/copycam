@@ -1,0 +1,15 @@
+<html>
+    <head>
+        <link rel="stylesheet" href="vex.css" />
+        <link rel="stylesheet" href="vex-theme-os.css" />
+        <script src="vex.combined.js"></script>
+        <script>vex.defaultOptions.className = 'vex-theme-os'</script>
+        <script type="module">
+            import { main } from './main.js';
+            window.main = main;
+        </script>
+    </head>
+    <body onload="main()">
+        <div id="logdiv"></div>
+    </body>
+</html>
