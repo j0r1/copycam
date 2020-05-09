@@ -14,7 +14,9 @@ let iceCandidates = [];
 let remoteStream = new MediaStream();
 let dialog = null;
 
-function log(msg, canClose = false)
+const responseUrl = "response.html";
+
+function log0(msg, canClose = false)
 {
     if (dialog)
     {
@@ -34,6 +36,12 @@ function log(msg, canClose = false)
     dialog = vex.dialog.alert(opts);
 }
 
+function log(msg)
+{
+    let elem = document.getElementById("logdiv");
+    elem.innerText += "" + msg + "\n";
+}
+
 function storeAnswerInLocalStorage()
 {
     let info = location.hash.substr(2);
@@ -43,22 +51,32 @@ function storeAnswerInLocalStorage()
 
 function processAnswer(info)
 {
-    console.log("Processing answer");
-    info = atob(info);
-    info = JSON.parse(info);
-    console.log(info);
+    try
+    {
+        console.log("Processing answer");
+        info = atob(info);
+        log(info);
+        info = JSON.parse(info);
+        console.log(info);
 
-    pc.setRemoteDescription(new RTCSessionDescription(info.answer)).then(function() {
-        console.log("Remote description set successfully");
-        dialog.close();
-    }).catch(function(error) {
-        console.log("Error");
-        console.log(error);
-        log("Error setting remote description");
-    });
+        pc.setRemoteDescription(new RTCSessionDescription(info.answer)).then(function() {
+            console.log("Remote description set successfully");
+            log("Remote description configured")
+            if (dialog)
+                dialog.close();
+        }).catch(function(error) {
+            console.log("Error");
+            console.log(error);
+            log("Error setting remote description:" + error);
+        });
 
-    for (let cand of info.candidates)
-        pc.addIceCandidate(cand);
+        for (let cand of info.candidates)
+            pc.addIceCandidate(cand);
+    }
+    catch(err)
+    {
+        log("Error processing answer: " + err);
+    }
 }
 
 function onIceGatheringFinished()
@@ -71,35 +89,51 @@ function onIceGatheringFinished()
     else
         throw "isInitiator is not set correctly";
     
+    log("Ice gathering finished");
+
     console.log("Sending offer:");
     console.log(info);
 
-    info = JSON.stringify(info);
-    info = btoa(info);
-    
-    let url = location.origin + location.pathname + "#";
-    if (!isInitiator)
-        url += "?";
-    url += info;
+    try {
 
-    navigator.clipboard.writeText(url);
+        info = JSON.stringify(info, null, 2);
+        info = btoa(info);
+        
+        let url = location.origin + location.pathname;
+        if (!isInitiator)
+            url += responseUrl + "#?";
+        else
+            url += "#";
 
-    if (isInitiator)
-    {
-        localStorage["testtesttest"] = "";
-        let timerId = setInterval(() => {
-            let info = localStorage["testtesttest"];
+        url += info;
 
-            if (localStorage["testtesttest"].length == 0)
-                return;
+        navigator.clipboard.writeText(url);
 
-            clearInterval(timerId);
-            processAnswer(info);
-        }, 1000);
-        log("Connection information gathered, copy clipboard url to other participant. Waiting for response...")
+        if (isInitiator)
+        {
+            localStorage["testtesttest"] = "";
+            let timerId = setInterval(() => {
+                let info = localStorage["testtesttest"];
+
+                if (localStorage["testtesttest"].length == 0)
+                {
+                    log("No response found");
+                    return;
+                }
+
+                log("Found response");
+                clearInterval(timerId);
+                processAnswer(info);
+            }, 2000);
+            log("Connection information gathered, copy clipboard url to other participant. Waiting for response...")
+        }
+        else
+            log("Connection information gathered, copy clipboard url to other participant and close dialog", true)
     }
-    else
-        log("Connection information gathered, copy clipboard url to other participant and close dialog", true)
+    catch(err)
+    {
+        log("Error: " + err);
+    }
 }
 
 function onIceCandidate(cand)
@@ -110,21 +144,29 @@ function onIceCandidate(cand)
         return;
     }
     iceCandidates.push(cand.candidate);
+    log("Got " + iceCandidates.length + " candidates");
 }
 
 async function startSending()
 {
-    pc = new RTCPeerConnection(pcConfig);
-    pc.addTrack(audioTrack);
-    pc.addTrack(videoTrack);
+    try
+    {
+        pc = new RTCPeerConnection(pcConfig);
+        pc.addTrack(audioTrack);
+        pc.addTrack(videoTrack);
 
-    pc.ontrack = onRemoteStream;
-    pc.onicecandidate = onIceCandidate;
-    
-    offer = await pc.createOffer();
-    console.log(offer);
+        pc.ontrack = onRemoteStream;
+        pc.onicecandidate = onIceCandidate;
+        
+        offer = await pc.createOffer();
+        console.log(offer);
 
-    await pc.setLocalDescription(offer);
+        await pc.setLocalDescription(offer);
+    }
+    catch(err)
+    {
+        log("Error in startSending: " + err);
+    }
 }
 
 function onRemoteStream(event)
@@ -135,24 +177,32 @@ function onRemoteStream(event)
 
 async function startReceiving()
 {
-    let info = location.hash.substr(1);
-    info = atob(info);
-    info = JSON.parse(info);
-    console.log(info);
+    try
+    {
+        let info = location.hash.substr(1);
+        info = atob(info);
+        log(info);
+        info = JSON.parse(info);
+        console.log(info);
 
-    pc = new RTCPeerConnection(pcConfig);
-    pc.addTrack(audioTrack);
-    pc.addTrack(videoTrack);
+        pc = new RTCPeerConnection(pcConfig);
+        pc.addTrack(audioTrack);
+        pc.addTrack(videoTrack);
 
-    pc.onicecandidate = onIceCandidate;
-    pc.ontrack = onRemoteStream;
-    
-    await pc.setRemoteDescription(new RTCSessionDescription(info.offer));
-    answer = await pc.createAnswer();
-    await pc.setLocalDescription(answer);
+        pc.onicecandidate = onIceCandidate;
+        pc.ontrack = onRemoteStream;
+        
+        await pc.setRemoteDescription(new RTCSessionDescription(info.offer));
+        answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
 
-    for (let cand of info.candidates)
-        pc.addIceCandidate(cand);
+        for (let cand of info.candidates)
+            pc.addIceCandidate(cand);
+    }
+    catch(err)
+    {
+        log("Error in startReceiving: " + err);
+    }
 }
 
 export async function main()
