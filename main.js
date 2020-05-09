@@ -12,11 +12,33 @@ let answer = null;
 let iceCandidates = [];
 
 let remoteStream = new MediaStream();
+let dialog = null;
+
+function log(msg, canClose = false)
+{
+    if (dialog)
+    {
+        dialog.close();
+        dialog = null;
+    }
+    
+    let opts = {
+        message: "Status: " + msg,
+        escapeButtonCloses: false,
+        overlayClosesOnClick: false,
+        showCloseButton: false,
+    }
+    if (!canClose)
+        opts.buttons = [];
+
+    dialog = vex.dialog.alert(opts);
+}
 
 function storeAnswerInLocalStorage()
 {
     let info = location.hash.substr(2);
     localStorage["testtesttest"] = info;
+    log("Response recorded, switch back to other tab")
 }
 
 function processAnswer(info)
@@ -28,9 +50,11 @@ function processAnswer(info)
 
     pc.setRemoteDescription(new RTCSessionDescription(info.answer)).then(function() {
         console.log("Remote description set successfully");
+        dialog.close();
     }).catch(function(error) {
         console.log("Error");
         console.log(error);
+        log("Error setting remote description");
     });
 
     for (let cand of info.candidates)
@@ -72,7 +96,10 @@ function onIceGatheringFinished()
             clearInterval(timerId);
             processAnswer(info);
         }, 1000);
+        log("Connection information gathered, copy clipboard url to other participant. Waiting for response...")
     }
+    else
+        log("Connection information gathered, copy clipboard url to other participant and close dialog", true)
 }
 
 function onIceCandidate(cand)
@@ -144,6 +171,7 @@ export async function main()
 
     try 
     {
+        log("Getting camera input");
         let stream = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
         console.log(stream);
 
@@ -177,9 +205,11 @@ export async function main()
             isInitiator = true;
             startSending();
         }
+        log("Gathering connection information")
 
     } catch(err) {
         console.log("Error:");
         console.log(err);
+        log("Error: " + err);
     }
 }
