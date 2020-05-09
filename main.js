@@ -58,7 +58,7 @@ function onIceGatheringFinished()
         url += "?";
     url += info;
 
-    document.getElementById("copyurl").innerHTML = url;
+    navigator.clipboard.writeText(url);
 
     if (isInitiator)
     {
@@ -104,10 +104,6 @@ function onRemoteStream(event)
 {
     console.log("onRemoteStream");
     remoteStream.addTrack(event.track);
-
-    let video = document.getElementById("remotevideo");
-    if (video.srcObject !== remoteStream)
-        video.srcObject = remoteStream;
 }
 
 async function startReceiving()
@@ -142,6 +138,9 @@ export async function main()
         window.close(); // TODO: figure this out
         return;
     }
+
+    let video = document.getElementById("remotevideo");
+    video.srcObject = remoteStream;
 
     try 
     {
