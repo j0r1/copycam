@@ -17,7 +17,7 @@ let lzma = new LZMA("lzma_worker.js");
 
 const responseUrl = "response.html";
 
-function log0(msg, canClose = false)
+function log(msg, canClose = false)
 {
     if (dialog)
     {
@@ -37,7 +37,7 @@ function log0(msg, canClose = false)
     dialog = vex.dialog.alert(opts);
 }
 
-function log(msg)
+function log0(msg)
 {
     let elem = document.getElementById("logdiv");
     elem.innerText += "" + msg + "\n";
@@ -54,7 +54,7 @@ async function processAnswer_helper(info)
 {
     try
     {
-        log(info);
+        //log(info);
         info = JSON.parse(info);
         console.log(info);
 
@@ -156,7 +156,7 @@ function onIceGatheringFinished()
 
                     if (localStorage["testtesttest"].length == 0)
                     {
-                        log("No response found");
+                        //log("No response found");
                         return;
                     }
 
@@ -222,7 +222,7 @@ async function startReceiving_helper(info)
 {
     try
     {
-        log(info);
+        //log(info);
         info = JSON.parse(info);
         console.log(info);
 
