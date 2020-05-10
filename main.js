@@ -327,3 +327,48 @@ export async function main()
         log("Error: " + err);
     }
 }
+
+function unmuteRemoteVideo()
+{
+    document.getElementById("localvideo").muted = true;
+    document.getElementById("remotevideo").muted = false;
+}
+
+function checkMute()
+{
+    let enabled = false;
+    if (audioTrack && audioTrack.enabled)
+        enabled = true;
+    
+    if (enabled)
+        document.getElementById("message").style.display = "none";
+    else
+        document.getElementById("message").style.display = "";
+}
+
+function toggleMute()
+{
+    if (!audioTrack)
+        return;
+    audioTrack.enabled = !audioTrack.enabled;
+}
+
+document.addEventListener('keypress', (evt) => {
+    if (evt.key == " ")
+        toggleMute();
+
+    unmuteRemoteVideo();
+    checkMute();
+})
+
+window.onmousemove = function()
+{
+    unmuteRemoteVideo();
+}
+
+window.onmousedown = function()
+{
+    toggleMute();
+    checkMute();
+}
+

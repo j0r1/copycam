@@ -18,3 +18,14 @@ body {
 	display: block;
 	margin: 0 auto;
 }
+
+#message {
+	position: fixed; /* or absolute */
+	top: 10%;
+	left: 50%;
+	/* bring your own prefixes */
+	transform: translate(-50%, -50%);
+	z-index: 2;
+	background-color: white;
+	text-color: grey;
+}

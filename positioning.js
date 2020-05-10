@@ -31,4 +31,4 @@ function onResize()
 window.onresize = onResize;
 document.getElementById("localvideo").onresize = onResize;
 document.getElementById("remotevideo").onresize = onResize;
-setInterval(onResize, 100);
+//setInterval(onResize, 1000);
