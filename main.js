@@ -13,6 +13,7 @@ let iceCandidates = [];
 
 let remoteStream = new MediaStream();
 let dialog = null;
+let lzma = new LZMA("lzma_worker.js");
 
 const responseUrl = "response.html";
 
@@ -49,12 +50,10 @@ function storeAnswerInLocalStorage()
     log("Response recorded, switch back to other tab")
 }
 
-function processAnswer(info)
+async function processAnswer_helper(info)
 {
     try
     {
-        console.log("Processing answer");
-        info = atob(info);
         log(info);
         info = JSON.parse(info);
         console.log(info);
@@ -75,8 +74,38 @@ function processAnswer(info)
     }
     catch(err)
     {
+        log("Error processing answer (helper): " + err);
+    }
+}
+
+function processAnswer(info)
+{
+    try
+    {
+        console.log("Processing answer");
+        info = FromBase64(info);
+        info = new Int8Array(info);
+        lzma.decompress(info, (result, err) => {
+            if (err)
+            {
+                log("Error decompressing result: " + err);
+                return;
+            }
+            processAnswer_helper(result);
+        });
+    }
+    catch(err)
+    {
         log("Error processing answer: " + err);
     }
+}
+
+function ToBase64(u8) {
+    return btoa(String.fromCharCode.apply(null, u8));
+}
+
+function FromBase64(str) {
+    return atob(str).split('').map(function (c) { return c.charCodeAt(0); });
 }
 
 function onIceGatheringFinished()
@@ -94,46 +123,60 @@ function onIceGatheringFinished()
     console.log("Sending offer:");
     console.log(info);
 
-    try {
+    info = JSON.stringify(info);
 
-        info = JSON.stringify(info, null, 2);
-        info = btoa(info);
-        
-        let url = location.origin + location.pathname;
-        if (!isInitiator)
-            url += responseUrl + "#?";
-        else
-            url += "#";
-
-        url += info;
-
-        navigator.clipboard.writeText(url);
-
-        if (isInitiator)
+    log("Compressing JSON object of length " + info.length);
+    lzma.compress(info, 9, (result, err) => {
+        if (err)
         {
-            localStorage["testtesttest"] = "";
-            let timerId = setInterval(() => {
-                let info = localStorage["testtesttest"];
-
-                if (localStorage["testtesttest"].length == 0)
-                {
-                    log("No response found");
-                    return;
-                }
-
-                log("Found response");
-                clearInterval(timerId);
-                processAnswer(info);
-            }, 2000);
-            log("Connection information gathered, copy clipboard url to other participant. Waiting for response...")
+            log("Error in compression: " + err);
+            return;
         }
-        else
-            log("Connection information gathered, copy clipboard url to other participant and close dialog", true)
-    }
-    catch(err)
-    {
-        log("Error: " + err);
-    }
+
+        log("Compression finished, length is " + result.length);
+        try {
+
+            let info = ToBase64(new Uint8Array(result));
+            log("B64 length is " + info.length);
+
+            let url = location.origin + location.pathname;
+            if (!isInitiator)
+                url += responseUrl + "#?";
+            else
+                url += "#";
+
+            url += info;
+            navigator.clipboard.writeText(url);
+
+            if (isInitiator)
+            {
+                localStorage["testtesttest"] = "";
+                let timerId = setInterval(() => {
+                    let info = localStorage["testtesttest"];
+
+                    if (localStorage["testtesttest"].length == 0)
+                    {
+                        log("No response found");
+                        return;
+                    }
+
+                    log("Found response");
+                    clearInterval(timerId);
+                    processAnswer(info);
+                }, 2000);
+                log("Connection information gathered, copy clipboard url to other participant. Waiting for response...")
+            }
+            else
+                log("Connection information gathered, copy clipboard url to other participant and close dialog", true)
+        }
+        catch(err)
+        {
+            log("Error: " + err);
+        }
+
+    });
+
+
 }
 
 function onIceCandidate(cand)
@@ -175,12 +218,10 @@ function onRemoteStream(event)
     remoteStream.addTrack(event.track);
 }
 
-async function startReceiving()
+async function startReceiving_helper(info)
 {
     try
     {
-        let info = location.hash.substr(1);
-        info = atob(info);
         log(info);
         info = JSON.parse(info);
         console.log(info);
@@ -198,6 +239,29 @@ async function startReceiving()
 
         for (let cand of info.candidates)
             pc.addIceCandidate(cand);
+    }
+    catch(err)
+    {
+        log("Error in startReceiving_helper: " + err);
+    }
+}
+
+async function startReceiving()
+{
+    try
+    {
+        let info = location.hash.substr(1);
+        info = FromBase64(info);
+        info = new Int8Array(info);
+        lzma.decompress(new Int8Array(info), (result, err) => {
+            if (err)
+            {
+                log("Unable to decompress offer " + err);
+                return; 
+            }
+
+            startReceiving_helper(result);
+        });
     }
     catch(err)
     {
