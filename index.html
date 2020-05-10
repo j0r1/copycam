@@ -2,6 +2,7 @@
     <head>
         <link rel="stylesheet" href="vex.css" />
         <link rel="stylesheet" href="vex-theme-os.css" />
+        <link rel="stylesheet" href="main.css" />
         <script src="vex.combined.js"></script>
         <script>vex.defaultOptions.className = 'vex-theme-os'</script>
         <script src="lzma.js"></script>
@@ -9,6 +10,7 @@
             import { main } from './main.js';
             window.main = main;
         </script>
+        <script type="module" src="positioning.js"></script>
     </head>
     <body onload="main()">
         <video id="localvideo" autoplay muted></video>
