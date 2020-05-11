@@ -147,6 +147,7 @@ function onIceGatheringFinished()
 
             url += info;
             navigator.clipboard.writeText(url);
+            document.getElementById("copyurl").value = url;
 
             if (isInitiator)
             {
@@ -164,10 +165,10 @@ function onIceGatheringFinished()
                     clearInterval(timerId);
                     processAnswer(info);
                 }, 2000);
-                log("Connection information gathered, copy clipboard url to other participant. Waiting for response...")
+                log("Connection information gathered, copy clipboard url to other participant (press 'u' to show url). Waiting for response...")
             }
             else
-                log("Connection information gathered, copy clipboard url to other participant and close dialog", true)
+                log("Connection information gathered, copy clipboard url to other participant and close dialog (press 'u' to show url)", true)
         }
         catch(err)
         {
@@ -272,6 +273,10 @@ async function startReceiving()
 export async function main()
 {
     console.log("main()");
+
+    let copyUrl = document.getElementById("copyurl");
+    if (copyUrl)
+        copyUrl.style.display = "none";
     
     if (location.hash.length > 0 && location.hash[1] == "?") // server reply
     {
@@ -353,9 +358,24 @@ function toggleMute()
     audioTrack.enabled = !audioTrack.enabled;
 }
 
+function toggleUrl()
+{
+    let elem = document.getElementById("copyurl");
+    if (!elem)
+        return;
+
+    if (elem.style.display == "none")
+        elem.style.display = "";
+    else
+        elem.style.display = "none";
+}
+
 document.addEventListener('keypress', (evt) => {
     if (evt.key == " ")
         toggleMute();
+
+    if (evt.key == "u")
+        toggleUrl();
 
     unmuteRemoteVideo();
     checkMute();
